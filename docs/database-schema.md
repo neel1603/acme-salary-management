@@ -113,9 +113,9 @@ Built and tested one table at a time (`Country` → `Department` → `Employee` 
 - [x] `app/database.py` — SQLAlchemy engine, session factory, declarative `Base`, FK enforcement
 - [x] `tests/conftest.py` — shared in-memory SQLite session fixture (all tables created, FK enforcement on)
 - [x] `app/models/country.py` — `Country` model + tests (table creation, `code` uniqueness)
-- [ ] `app/models/department.py` — `Department` model + tests (table creation, `name` uniqueness)
-- [ ] `app/models/employee.py` — `Employee` model with FKs, indexes, composite indexes + tests (table creation, FK validation, `employee_code`/`email` uniqueness, default timestamps)
-- [ ] `app/models/salary_history.py` — `SalaryHistory` model + tests (table creation, FK validation)
+- [x] `app/models/department.py` — `Department` model + tests (table creation, `name` uniqueness)
+- [x] `app/models/employee.py` — `Employee` model with FKs, indexes, composite indexes + tests (table creation, FK validation, `employee_code`/`email` uniqueness, default timestamps)
+- [x] `app/models/salary_history.py` — `SalaryHistory` model + tests (table creation, FK validation)
 
 ## Test Cases
 
