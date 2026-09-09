@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, func
@@ -19,8 +20,8 @@ class SalaryHistory(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     employee_id: Mapped[int] = mapped_column(ForeignKey("employees.id"), nullable=False, index=True)
-    old_salary_local: Mapped[float] = mapped_column(Numeric(14, 2, asdecimal=False), nullable=False)
-    new_salary_local: Mapped[float] = mapped_column(Numeric(14, 2, asdecimal=False), nullable=False)
+    old_salary_local: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    new_salary_local: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     changed_at: Mapped[dt.datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
     employee: Mapped["Employee"] = relationship()

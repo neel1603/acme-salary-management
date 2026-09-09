@@ -42,6 +42,15 @@ def _build_employee(*, employee_code: str, email: str, department_id: int, count
     )
 
 
+@pytest.fixture()
+def valid_department_and_country(db_session):
+    department = _build_department()
+    country = _build_country()
+    db_session.add_all([department, country])
+    db_session.commit()
+    return department, country
+
+
 def test_employee_table_creates_successfully(db_session):
     inspector = inspect(db_session.get_bind())
     column_names = {column["name"] for column in inspector.get_columns("employees")}
@@ -66,24 +75,35 @@ def test_employee_table_creates_successfully(db_session):
     }
 
 
-def test_employee_requires_valid_department_and_country(db_session):
-    employee_with_bad_foreign_keys = _build_employee(
-        employee_code="EMP00001",
-        email="jane.doe@example.com",
-        department_id=999,
-        country_id=999,
-    )
-    db_session.add(employee_with_bad_foreign_keys)
+def test_employee_requires_valid_department_and_country(db_session, valid_department_and_country):
+    department, country = valid_department_and_country
 
+    db_session.add(
+        _build_employee(
+            employee_code="EMP00001",
+            email="jane.doe@example.com",
+            department_id=999,
+            country_id=country.id,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
+
+    db_session.add(
+        _build_employee(
+            employee_code="EMP00002",
+            email="john.smith@example.com",
+            department_id=department.id,
+            country_id=999,
+        )
+    )
     with pytest.raises(IntegrityError):
         db_session.commit()
 
 
-def test_employee_code_is_unique(db_session):
-    department = _build_department()
-    country = _build_country()
-    db_session.add_all([department, country])
-    db_session.commit()
+def test_employee_code_is_unique(db_session, valid_department_and_country):
+    department, country = valid_department_and_country
 
     db_session.add(
         _build_employee(
@@ -107,11 +127,8 @@ def test_employee_code_is_unique(db_session):
         db_session.commit()
 
 
-def test_employee_email_is_unique(db_session):
-    department = _build_department()
-    country = _build_country()
-    db_session.add_all([department, country])
-    db_session.commit()
+def test_employee_email_is_unique(db_session, valid_department_and_country):
+    department, country = valid_department_and_country
 
     db_session.add(
         _build_employee(
@@ -135,11 +152,8 @@ def test_employee_email_is_unique(db_session):
         db_session.commit()
 
 
-def test_employee_defaults(db_session):
-    department = _build_department()
-    country = _build_country()
-    db_session.add_all([department, country])
-    db_session.commit()
+def test_employee_defaults(db_session, valid_department_and_country):
+    department, country = valid_department_and_country
 
     new_employee = _build_employee(
         employee_code="EMP00001",

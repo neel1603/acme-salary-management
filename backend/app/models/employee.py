@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, Index, Numeric, String, func
@@ -34,8 +35,8 @@ class Employee(Base):
     job_title: Mapped[str] = mapped_column(String, nullable=False)
     job_level: Mapped[str] = mapped_column(String, nullable=False)
 
-    salary_local: Mapped[float] = mapped_column(Numeric(14, 2, asdecimal=False), nullable=False)
-    salary_usd: Mapped[float] = mapped_column(Numeric(14, 2, asdecimal=False), nullable=False)
+    salary_local: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    salary_usd: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
 
     hire_date: Mapped[dt.date] = mapped_column(Date, nullable=False, index=True)
     employment_status: Mapped[str] = mapped_column(String, nullable=False, index=True)

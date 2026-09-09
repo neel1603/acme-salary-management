@@ -85,6 +85,12 @@ Kept deliberately lightweight: no `reason`/`approved_by`/currency-change handlin
 
 **Explicit scope cut**: FX rates are a fixed, hand-curated mock table, not a live feed. This keeps seeding, tests, and the demo fully deterministic and removes an external network dependency from the build. The schema already supports swapping in a real FX provider later; only the population mechanism would change.
 
+### Money columns use `Decimal`, not `float`
+
+`fx_rate_to_usd`, `salary_local`, `salary_usd`, and the `SalaryHistory` salary columns are mapped as `Numeric` with `asdecimal=True` (SQLAlchemy's default), so Python-side reads and arithmetic — aggregates, hike % calculations — work with `Decimal`, not `float`. Binary floating point can't exactly represent most base-10 currency amounts, and that error compounds across `SUM`/`AVG` over 10,000 rows.
+
+**Caveat**: this guarantees correctness in application code, not in the raw on-disk bytes — SQLite has no native fixed-precision decimal storage type. An accepted, documented limit of building on SQLite rather than a database with a true `DECIMAL` type.
+
 ### Median computed in Python, not SQL
 
 SQLite has no built-in median/percentile aggregate function. Given the scale here (10,000 rows total, far fewer per filtered group), the KPI/breakdown services fetch the relevant `salary_usd` values and compute the median with Python's `statistics.median()`. Simple, correct, and fast at this data size.
