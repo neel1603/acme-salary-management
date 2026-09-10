@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.models  # noqa: F401 - ensures all models are registered on Base before create_all
 from app.database import Base, create_engine_with_foreign_keys_enabled
+from app.main import app as fastapi_app
 
 
 @pytest.fixture()
@@ -28,3 +30,8 @@ def in_memory_session_factory():
         yield sessionmaker(bind=in_memory_engine, autoflush=False, autocommit=False)
     finally:
         in_memory_engine.dispose()
+
+
+@pytest.fixture()
+def client():
+    return TestClient(fastapi_app)
