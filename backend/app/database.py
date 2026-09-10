@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from typing import Iterator
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 DEFAULT_DATABASE_URL = "sqlite:///./acme_salary.db"
@@ -30,3 +33,17 @@ def create_engine_with_foreign_keys_enabled(database_url: str, *, use_static_poo
 
 engine = create_engine_with_foreign_keys_enabled(DEFAULT_DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+@contextmanager
+def session_scope(session_factory: sessionmaker = SessionLocal) -> Iterator[Session]:
+    """Open a session, commit on success, roll back on error, always close."""
+    session = session_factory()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
