@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-DEFAULT_DATABASE_URL = "sqlite:///./acme_salary.db"
+from app.config import settings
 
 
 class Base(DeclarativeBase):
@@ -31,7 +31,7 @@ def create_engine_with_foreign_keys_enabled(database_url: str, *, use_static_poo
     return engine
 
 
-engine = create_engine_with_foreign_keys_enabled(DEFAULT_DATABASE_URL)
+engine = create_engine_with_foreign_keys_enabled(settings.database_url)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
@@ -47,3 +47,9 @@ def session_scope(session_factory: sessionmaker = SessionLocal) -> Iterator[Sess
         raise
     finally:
         session.close()
+
+
+def get_db() -> Iterator[Session]:
+    """FastAPI dependency: a request-scoped session, via session_scope()."""
+    with session_scope() as session:
+        yield session
