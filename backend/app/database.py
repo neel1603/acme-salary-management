@@ -47,3 +47,9 @@ def session_scope(session_factory: sessionmaker = SessionLocal) -> Iterator[Sess
         raise
     finally:
         session.close()
+
+
+def get_db() -> Iterator[Session]:
+    """FastAPI dependency: a request-scoped session, via session_scope()."""
+    with session_scope() as session:
+        yield session

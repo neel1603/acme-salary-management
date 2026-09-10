@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.models  # noqa: F401 - ensures all models are registered on Base before create_all
-from app.database import Base, create_engine_with_foreign_keys_enabled
+from app.database import Base, create_engine_with_foreign_keys_enabled, get_db, session_scope
 from app.main import app as fastapi_app
 
 
@@ -33,5 +33,15 @@ def in_memory_session_factory():
 
 
 @pytest.fixture()
-def client():
-    return TestClient(fastapi_app)
+def client(in_memory_session_factory):
+    """A TestClient whose get_db dependency is overridden to use the in-memory test database."""
+
+    def override_get_db():
+        with session_scope(in_memory_session_factory) as session:
+            yield session
+
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    try:
+        yield TestClient(fastapi_app)
+    finally:
+        fastapi_app.dependency_overrides.clear()
