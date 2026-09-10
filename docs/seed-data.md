@@ -102,10 +102,10 @@ Added to `app/database.py`: `@contextmanager def session_scope(): ...` opens a s
 
 ## Subtasks
 
-- [ ] `app/database.py` — add `session_scope()` context manager + test
-- [ ] `app/seed/reference_data.py` — country/department/job-level reference data as dataclasses + sanity tests
-- [ ] `app/seed/seed_data.py` — weighted deterministic seeding logic, bulk insert, `--count`/`--reset` CLI + tests
-- [ ] `requirements.txt` — add `Faker`
+- [x] `app/database.py` — add `session_scope()` context manager + test
+- [x] `app/seed/reference_data.py` — country/department/job-level reference data as dataclasses + sanity tests
+- [x] `app/seed/seed_data.py` — weighted deterministic seeding logic, bulk insert, `--count`/`--reset` CLI + tests
+- [x] `requirements.txt` — add `Faker`
 
 ## Test Cases
 
