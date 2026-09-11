@@ -8,6 +8,17 @@ DEFAULT_EMPLOYMENT_STATUS = "Active"
 ALL_EMPLOYMENT_STATUSES = "All"
 
 
+def resolve_status_filter(employment_status: str) -> str | None:
+    """None means "don't filter by status" — the explicit `All` escape hatch.
+
+    Shared by `EmployeeFilterParams` and `EmployeeListParams` so the `All` convention
+    lives in one place despite the two models exposing different field sets.
+    """
+    if employment_status.lower() == ALL_EMPLOYMENT_STATUSES.lower():
+        return None
+    return employment_status
+
+
 class EmployeeFilterParams(BaseModel):
     """Shared employee-filter shape for the KPI/breakdown endpoints.
 
@@ -26,7 +37,4 @@ class EmployeeFilterParams(BaseModel):
 
     @property
     def status_filter(self) -> str | None:
-        """None means "don't filter by status" — the explicit `All` escape hatch."""
-        if self.employment_status.lower() == ALL_EMPLOYMENT_STATUSES.lower():
-            return None
-        return self.employment_status
+        return resolve_status_filter(self.employment_status)
