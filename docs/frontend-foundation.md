@@ -52,17 +52,20 @@ The root `.gitignore` was Python-only (`__pycache__/`, `.venv/`, `.pytest_cache/
 
 - **KPI cards, charts, filter bar, employee table, CRUD dialogs** — deferred to `docs/frontend-dashboard.md` and a later employee-management UI doc. This step ends at "the data layer works and is proven against the live API."
 - **Mutation hooks** (create/update/deactivate employee) — deferred to the employee-management UI commit, where there's a form to wire them to; writing them now would mean designing them without a consumer.
+- **Employee detail and salary-history fetch functions** — same reasoning as the mutation hooks above: the `## Subtasks` hook list only calls for `useEmployees` (the paginated list, for the table), not a detail or history hook, so `src/api/employees.js` stays scoped to `fetchEmployees`. `GET /employees/{id}` and `GET /employees/{id}/salary-history` get their own mapper + hook once the employee-management UI has a detail view/dialog to call them from.
 - **A mock server (MSW)** — a `vi.fn()` fetch stub is enough while nothing but tests consumes the API layer; MSW earns its setup cost once real components are involved.
 - **JSDoc type annotations** — would partially recreate what TypeScript gives for free; the wire→domain mapper tests are the chosen safety net instead, per the plain-JS decision above.
 
 ## Subtasks
 
 - [x] Vite + React + JS scaffold, Tailwind v4 + shadcn/ui, `react-router` routing shell (`/`, `/employees`, not-found), Vitest + RTL harness + shell test
-- [ ] `src/api/client.js` — `apiFetch` with query-string building and an `ApiError` subclass
-- [ ] `src/api/kpis.js`, `breakdowns.js`, `employees.js`, `lookups.js` — per-endpoint functions + wire→domain mappers
-- [ ] `src/lib/money.js` — `parseMoney`, `formatUsd`, `formatUsdCompact`
-- [ ] `src/lib/queryKeys.js` — hierarchical query-key factory
-- [ ] `src/hooks/*` — `useKpiSummary`, `useDepartmentBreakdown`, `useCountryBreakdown`, `useEmployees`, `useLookups`
+
+API layer, committed feature-by-feature in dependency order (each group's own `queryKeys` entry lands in the same commit that introduces it, same reasoning as the incremental `.gitignore` growth above):
+
+- [x] `src/api/client.js` (`apiFetch` + `ApiError`) and `src/api/lookups.js` + `useLookups` — the foundation, paired with the one endpoint group with no money fields and no filters
+- [ ] `src/lib/money.js` + `src/api/kpis.js` + `useKpiSummary` — the money-parsing boundary, exercised first by the simplest money-bearing endpoint
+- [ ] `src/api/breakdowns.js` + `useDepartmentBreakdown` + `useCountryBreakdown`
+- [ ] `src/api/employees.js` + `useEmployees`
 - [ ] Tests for the above (see Test Cases)
 
 ## Test Cases
