@@ -63,7 +63,7 @@ The root `.gitignore` was Python-only (`__pycache__/`, `.venv/`, `.pytest_cache/
 API layer, committed feature-by-feature in dependency order (each group's own `queryKeys` entry lands in the same commit that introduces it, same reasoning as the incremental `.gitignore` growth above):
 
 - [x] `src/api/client.js` (`apiFetch` + `ApiError`) and `src/api/lookups.js` + `useLookups` — the foundation, paired with the one endpoint group with no money fields and no filters
-- [ ] `src/lib/money.js` + `src/api/kpis.js` + `useKpiSummary` — the money-parsing boundary, exercised first by the simplest money-bearing endpoint
+- [x] `src/lib/money.js` + `src/api/kpis.js` + `useKpiSummary` — the money-parsing boundary, exercised first by the simplest money-bearing endpoint
 - [ ] `src/api/breakdowns.js` + `useDepartmentBreakdown` + `useCountryBreakdown`
 - [ ] `src/api/employees.js` + `useEmployees`
 - [ ] Tests for the above (see Test Cases)
