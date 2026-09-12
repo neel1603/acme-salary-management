@@ -64,9 +64,9 @@ API layer, committed feature-by-feature in dependency order (each group's own `q
 
 - [x] `src/api/client.js` (`apiFetch` + `ApiError`) and `src/api/lookups.js` + `useLookups` — the foundation, paired with the one endpoint group with no money fields and no filters
 - [x] `src/lib/money.js` + `src/api/kpis.js` + `useKpiSummary` — the money-parsing boundary, exercised first by the simplest money-bearing endpoint
-- [ ] `src/api/breakdowns.js` + `useDepartmentBreakdown` + `useCountryBreakdown`
-- [ ] `src/api/employees.js` + `useEmployees`
-- [ ] Tests for the above (see Test Cases)
+- [x] `src/api/breakdowns.js` + `useDepartmentBreakdown` + `useCountryBreakdown`
+- [x] `src/api/employees.js` + `useEmployees`
+- [x] Tests for the above (see Test Cases)
 
 ## Test Cases
 

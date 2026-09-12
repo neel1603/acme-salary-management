@@ -22,6 +22,7 @@ export default defineConfig([
     files: ['src/components/ui/**/*.jsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
+      'no-unused-vars': 'off',
     },
   },
 ])
