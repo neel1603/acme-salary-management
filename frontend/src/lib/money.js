@@ -27,3 +27,14 @@ export function formatUsd(value) {
 export function formatUsdCompact(value) {
   return usdCompactFormatter.format(value)
 }
+
+// Salary history and the employee detail view show amounts in the employee's own local currency
+// (an HR user reviewing a raise thinks in the currency they set it in), so unlike formatUsd this
+// takes the currency code per call rather than baking in USD.
+export function formatLocalCurrency(value, currencyCode) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+    maximumFractionDigits: 0,
+  }).format(value)
+}

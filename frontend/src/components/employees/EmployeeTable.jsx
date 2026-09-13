@@ -136,7 +136,7 @@ export function EmployeeTable({ params, onSortChange, onPageChange, onView, onEd
                       variant="ghost"
                       size="icon-sm"
                       aria-label={`Deactivate ${employee.firstName} ${employee.lastName}`}
-                      onClick={() => onDeactivate(employee.id)}
+                      onClick={() => onDeactivate(employee.id, `${employee.firstName} ${employee.lastName}`)}
                     >
                       <UserX />
                     </Button>

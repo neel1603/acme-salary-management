@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatUsd, formatUsdCompact, parseMoney } from './money'
+import { formatLocalCurrency, formatUsd, formatUsdCompact, parseMoney } from './money'
 
 describe('parseMoney', () => {
   it('parses a decimal string to a number', () => {
@@ -27,5 +27,12 @@ describe('formatUsd', () => {
 describe('formatUsdCompact', () => {
   it('formats a large payroll figure compactly, for chart axis ticks', () => {
     expect(formatUsdCompact(712345678)).toBe('$712.3M')
+  })
+})
+
+describe('formatLocalCurrency', () => {
+  it('formats a value in the given currency, not always USD', () => {
+    expect(formatLocalCurrency(1200000, 'INR')).toBe('₹1,200,000')
+    expect(formatLocalCurrency(80000, 'EUR')).toBe('€80,000')
   })
 })

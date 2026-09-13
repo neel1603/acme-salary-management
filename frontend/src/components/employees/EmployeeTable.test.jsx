@@ -124,4 +124,23 @@ describe('EmployeeTable', () => {
 
     expect(screen.queryByRole('button', { name: /Deactivate/ })).not.toBeInTheDocument()
   })
+
+  it('passes the employee id and display name to onDeactivate, so the confirmation dialog needs no extra fetch', async () => {
+    useEmployees.mockReturnValue({ data: { items: [employee()], totalItems: 1 }, isLoading: false, isError: false })
+    const onDeactivate = vi.fn()
+
+    render(
+      <EmployeeTable
+        params={BASE_PARAMS}
+        onSortChange={noop}
+        onPageChange={noop}
+        onView={noop}
+        onEdit={noop}
+        onDeactivate={onDeactivate}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Deactivate Ada Lovelace' }))
+    expect(onDeactivate).toHaveBeenCalledWith(1, 'Ada Lovelace')
+  })
 })
