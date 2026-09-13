@@ -21,7 +21,9 @@ export function EmployeePagination({ params, onPageChange, onPageSizeChange }) {
   const isLastPage = page >= totalPages
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    // Sticky to the viewport bottom so Prev/Next stay reachable without scrolling the page --
+    // the table above scrolls internally instead of pushing this bar down.
+    <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t bg-background py-3">
       <p className="text-sm text-muted-foreground">
         Page {page} of {Math.max(totalPages, 1)} ({totalItems} total)
       </p>
@@ -38,7 +40,9 @@ export function EmployeePagination({ params, onPageChange, onPageSizeChange }) {
 
         <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
           <SelectTrigger className="w-28">
-            <SelectValue />
+            {/* SelectValue shows the raw value ("25"), not the "25 / page" label -- Base UI only
+                resolves a label automatically when an `items` map is passed to the root. */}
+            <SelectValue>{(value) => `${value} / page`}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {PAGE_SIZE_OPTIONS.map((size) => (

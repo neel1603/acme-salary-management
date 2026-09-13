@@ -29,7 +29,13 @@ export function FilterBar({ filters, onFiltersChange }) {
           }
         >
           <SelectTrigger id="filter-department">
-            <SelectValue placeholder="All Departments" />
+            {/* SelectValue shows the raw value ("5"), not the matching item's label -- Base UI only
+                resolves a label automatically when an `items` map is passed to the Select root. */}
+            <SelectValue>
+              {(value) =>
+                value === 'all' ? 'All Departments' : departments.data?.find((department) => String(department.id) === value)?.name
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>
@@ -53,7 +59,9 @@ export function FilterBar({ filters, onFiltersChange }) {
           }
         >
           <SelectTrigger id="filter-country">
-            <SelectValue placeholder="All Countries" />
+            <SelectValue>
+              {(value) => (value === 'all' ? 'All Countries' : countries.data?.find((country) => String(country.id) === value)?.name)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Countries</SelectItem>

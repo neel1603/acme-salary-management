@@ -72,6 +72,9 @@ describe('EmployeeFormDialog', () => {
     expect(screen.getByLabelText('First Name')).toHaveValue('Ada')
     expect(screen.getByLabelText('Email')).toHaveValue('ada@example.com')
     expect(screen.getByLabelText(/^Salary/)).toHaveValue(12000000)
+    // Regression: the Select triggers must show the department/country names, not their raw ids.
+    expect(screen.getByLabelText('Department')).toHaveTextContent('Engineering')
+    expect(screen.getByLabelText('Country')).toHaveTextContent('India')
   })
 
   it('clears the salary field and shows the new currency when the country is changed', async () => {

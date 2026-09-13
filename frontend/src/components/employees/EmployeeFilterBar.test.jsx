@@ -34,6 +34,15 @@ describe('EmployeeFilterBar', () => {
     expect(onFiltersChange).toHaveBeenCalledWith({ ...BASE_FILTERS, country_id: undefined })
   })
 
+  it('shows the selected department and country names in the triggers, not their raw ids', () => {
+    render(
+      <EmployeeFilterBar filters={{ ...BASE_FILTERS, department_id: 1, country_id: 5 }} onFiltersChange={vi.fn()} />,
+    )
+
+    expect(screen.getByLabelText('Department')).toHaveTextContent('Engineering')
+    expect(screen.getByLabelText('Country')).toHaveTextContent('Canada')
+  })
+
   it('calls onFiltersChange with the new status when a status is picked', async () => {
     const onFiltersChange = vi.fn()
     render(<EmployeeFilterBar filters={BASE_FILTERS} onFiltersChange={onFiltersChange} />)
@@ -72,6 +81,42 @@ describe('EmployeeFilterBar', () => {
       act(() => vi.advanceTimersByTime(300))
 
       expect(onFiltersChange).toHaveBeenCalledWith({ ...BASE_FILTERS, search: undefined })
+    })
+
+    it('shows a clear button only once text is typed, and clearing it empties the box immediately', () => {
+      render(<EmployeeFilterBar filters={BASE_FILTERS} onFiltersChange={vi.fn()} />)
+
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument()
+
+      fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'Ada' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+
+      expect(screen.getByLabelText('Search')).toHaveValue('')
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('clear filters', () => {
+    it('is hidden when every filter is already at its default', () => {
+      render(<EmployeeFilterBar filters={BASE_FILTERS} onFiltersChange={vi.fn()} />)
+      expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
+    })
+
+    it('appears once a filter is applied and resets department, country, status, and search, keeping sort/page params', () => {
+      const onFiltersChange = vi.fn()
+      const filters = { ...BASE_FILTERS, department_id: 1, country_id: 5, employment_status: 'On Leave', search: 'Ada' }
+      render(<EmployeeFilterBar filters={filters} onFiltersChange={onFiltersChange} />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+
+      expect(onFiltersChange).toHaveBeenCalledWith({
+        ...BASE_FILTERS,
+        department_id: undefined,
+        country_id: undefined,
+        employment_status: 'Active',
+        search: undefined,
+      })
+      expect(screen.getByLabelText('Search')).toHaveValue('')
     })
   })
 })

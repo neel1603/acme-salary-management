@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useDepartmentBreakdown } from '@/hooks/useDepartmentBreakdown'
 import { formatUsd, formatUsdCompact } from '@/lib/money'
 
@@ -9,6 +9,7 @@ function ChartTooltip({ active, payload }) {
     <div className="rounded-lg border bg-popover p-2 text-sm shadow-md">
       <p className="font-medium">{item.departmentName}</p>
       <p>Average salary: {formatUsd(item.averageSalaryUsd)}</p>
+      <p>Median salary: {formatUsd(item.medianSalaryUsd)}</p>
       <p>Headcount: {item.headcount}</p>
       <p>Total payroll: {formatUsd(item.totalPayrollUsd)}</p>
     </div>
@@ -33,7 +34,9 @@ export function DepartmentBreakdownChart({ filters }) {
         <XAxis dataKey="departmentName" />
         <YAxis tickFormatter={formatUsdCompact} />
         <Tooltip content={<ChartTooltip />} />
-        <Bar dataKey="averageSalaryUsd" fill="var(--chart-1)" />
+        <Legend />
+        <Bar dataKey="averageSalaryUsd" name="Average" fill="var(--chart-1)" />
+        <Bar dataKey="medianSalaryUsd" name="Median" fill="var(--chart-4)" />
       </BarChart>
     </ResponsiveContainer>
   )

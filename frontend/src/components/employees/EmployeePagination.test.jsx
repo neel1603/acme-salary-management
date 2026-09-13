@@ -27,6 +27,8 @@ describe('EmployeePagination', () => {
     expect(screen.getByText('Page 1 of 3 (63 total)')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    // Regression: the trigger must show the "25 / page" label, not the raw value "25".
+    expect(screen.getByRole('combobox')).toHaveTextContent('25 / page')
   })
 
   it('disables Next on the last page', () => {

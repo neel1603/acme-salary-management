@@ -61,92 +61,96 @@ export function EmployeeTable({ params, onSortChange, onPageChange, onView, onEd
   const isOutOfRangePage = data.items.length === 0 && data.totalItems > 0
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {SORTABLE_COLUMNS.map((column) => (
-            <SortableHeader
-              key={column.key}
-              column={column}
-              sortBy={params.sort_by}
-              sortDir={params.sort_dir}
-              onSortChange={onSortChange}
-            />
-          ))}
-          {/* employment_status isn't in the backend's sortable-column allow-list -- a clickable
-              header here would render a sort arrow that silently does nothing. */}
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {isOutOfRangePage ? (
+    // Bounded height + its own scrollbar so a large directory scrolls in place instead of
+    // growing the page and pushing the pagination bar down with it.
+    <div className="max-h-[60vh] overflow-y-auto rounded-md border">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={SORTABLE_COLUMNS.length + 2} className="py-8 text-center text-muted-foreground">
-              No employees on this page.{' '}
-              <Button variant="link" className="h-auto p-0" onClick={() => onPageChange(1)}>
-                Go to first page
-              </Button>
-            </TableCell>
+            {SORTABLE_COLUMNS.map((column) => (
+              <SortableHeader
+                key={column.key}
+                column={column}
+                sortBy={params.sort_by}
+                sortDir={params.sort_dir}
+                onSortChange={onSortChange}
+              />
+            ))}
+            {/* employment_status isn't in the backend's sortable-column allow-list -- a clickable
+                header here would render a sort arrow that silently does nothing. */}
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ) : data.items.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={SORTABLE_COLUMNS.length + 2} className="py-8 text-center text-muted-foreground">
-              No employees match these filters.
-            </TableCell>
-          </TableRow>
-        ) : (
-          data.items.map((employee) => (
-            <TableRow key={employee.id}>
-              <TableCell>
-                {employee.firstName} {employee.lastName}
+        </TableHeader>
+        <TableBody>
+          {isOutOfRangePage ? (
+            <TableRow>
+              <TableCell colSpan={SORTABLE_COLUMNS.length + 2} className="py-8 text-center text-muted-foreground">
+                No employees on this page.{' '}
+                <Button variant="link" className="h-auto p-0" onClick={() => onPageChange(1)}>
+                  Go to first page
+                </Button>
               </TableCell>
-              <TableCell>{employee.employeeCode}</TableCell>
-              <TableCell>{employee.departmentName}</TableCell>
-              <TableCell>{employee.countryName}</TableCell>
-              <TableCell>{employee.jobTitle}</TableCell>
-              <TableCell>{employee.jobLevel}</TableCell>
-              <TableCell>{formatUsd(employee.salaryUsd)}</TableCell>
-              <TableCell>{employee.hireDate}</TableCell>
-              <TableCell>
-                <Badge className={STATUS_BADGE_CLASSNAME[employee.employmentStatus] ?? ''}>
-                  {employee.employmentStatus}
-                </Badge>
+            </TableRow>
+          ) : data.items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={SORTABLE_COLUMNS.length + 2} className="py-8 text-center text-muted-foreground">
+                No employees match these filters.
               </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`View ${employee.firstName} ${employee.lastName}`}
-                    onClick={() => onView(employee.id)}
-                  >
-                    <Eye />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Edit ${employee.firstName} ${employee.lastName}`}
-                    onClick={() => onEdit(employee.id)}
-                  >
-                    <Pencil />
-                  </Button>
-                  {employee.employmentStatus !== 'Terminated' && (
+            </TableRow>
+          ) : (
+            data.items.map((employee) => (
+              <TableRow key={employee.id}>
+                <TableCell>
+                  {employee.firstName} {employee.lastName}
+                </TableCell>
+                <TableCell>{employee.employeeCode}</TableCell>
+                <TableCell>{employee.departmentName}</TableCell>
+                <TableCell>{employee.countryName}</TableCell>
+                <TableCell>{employee.jobTitle}</TableCell>
+                <TableCell>{employee.jobLevel}</TableCell>
+                <TableCell>{formatUsd(employee.salaryUsd)}</TableCell>
+                <TableCell>{employee.hireDate}</TableCell>
+                <TableCell>
+                  <Badge className={STATUS_BADGE_CLASSNAME[employee.employmentStatus] ?? ''}>
+                    {employee.employmentStatus}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`Deactivate ${employee.firstName} ${employee.lastName}`}
-                      onClick={() => onDeactivate(employee.id, `${employee.firstName} ${employee.lastName}`)}
+                      aria-label={`View ${employee.firstName} ${employee.lastName}`}
+                      onClick={() => onView(employee.id)}
                     >
-                      <UserX />
+                      <Eye />
                     </Button>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit ${employee.firstName} ${employee.lastName}`}
+                      onClick={() => onEdit(employee.id)}
+                    >
+                      <Pencil />
+                    </Button>
+                    {employee.employmentStatus !== 'Terminated' && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Deactivate ${employee.firstName} ${employee.lastName}`}
+                        onClick={() => onDeactivate(employee.id, `${employee.firstName} ${employee.lastName}`)}
+                      >
+                        <UserX />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

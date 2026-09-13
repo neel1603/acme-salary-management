@@ -174,7 +174,13 @@ function EmployeeForm({ mode, employeeId, initialValues, onClose }) {
             onValueChange={(value) => updateField('departmentId', Number(value))}
           >
             <SelectTrigger id="employee-form-department" className="w-full">
-              <SelectValue placeholder="Select department" />
+              {/* SelectValue shows the raw value ("5"), not the matching item's label -- Base UI
+                  only resolves a label automatically when an `items` map is passed to the root. */}
+              <SelectValue>
+                {(value) =>
+                  value == null ? 'Select department' : departments.data?.find((department) => String(department.id) === value)?.name
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {departments.data?.map((department) => (
@@ -192,7 +198,9 @@ function EmployeeForm({ mode, employeeId, initialValues, onClose }) {
             onValueChange={(value) => handleCountryChange(Number(value))}
           >
             <SelectTrigger id="employee-form-country" className="w-full">
-              <SelectValue placeholder="Select country" />
+              <SelectValue>
+                {(value) => (value == null ? 'Select country' : countries.data?.find((country) => String(country.id) === value)?.name)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {countries.data?.map((country) => (

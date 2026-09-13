@@ -25,8 +25,22 @@ describe('DepartmentBreakdownChart', () => {
   it('renders the chart container instead of the loading/error copy once data arrives', () => {
     useDepartmentBreakdown.mockReturnValue({
       data: [
-        { departmentId: 1, departmentName: 'Engineering', headcount: 10, averageSalaryUsd: 90000, totalPayrollUsd: 900000 },
-        { departmentId: 2, departmentName: 'Sales', headcount: 5, averageSalaryUsd: 60000, totalPayrollUsd: 300000 },
+        {
+          departmentId: 1,
+          departmentName: 'Engineering',
+          headcount: 10,
+          averageSalaryUsd: 90000,
+          medianSalaryUsd: 85000,
+          totalPayrollUsd: 900000,
+        },
+        {
+          departmentId: 2,
+          departmentName: 'Sales',
+          headcount: 5,
+          averageSalaryUsd: 60000,
+          medianSalaryUsd: 58000,
+          totalPayrollUsd: 300000,
+        },
       ],
       isLoading: false,
       isError: false,

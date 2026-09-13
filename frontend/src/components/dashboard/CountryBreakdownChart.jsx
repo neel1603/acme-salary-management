@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useCountryBreakdown } from '@/hooks/useCountryBreakdown'
 import { formatUsd, formatUsdCompact } from '@/lib/money'
 
@@ -11,6 +11,7 @@ function ChartTooltip({ active, payload }) {
         {item.countryName} ({item.currencyCode})
       </p>
       <p>Average salary: {formatUsd(item.averageSalaryUsd)}</p>
+      <p>Median salary: {formatUsd(item.medianSalaryUsd)}</p>
       <p>Headcount: {item.headcount}</p>
       <p>Total payroll: {formatUsd(item.totalPayrollUsd)}</p>
     </div>
@@ -35,7 +36,9 @@ export function CountryBreakdownChart({ filters }) {
         <XAxis dataKey="countryName" />
         <YAxis tickFormatter={formatUsdCompact} />
         <Tooltip content={<ChartTooltip />} />
-        <Bar dataKey="averageSalaryUsd" fill="var(--chart-2)" />
+        <Legend />
+        <Bar dataKey="averageSalaryUsd" name="Average" fill="var(--chart-2)" />
+        <Bar dataKey="medianSalaryUsd" name="Median" fill="var(--chart-4)" />
       </BarChart>
     </ResponsiveContainer>
   )
