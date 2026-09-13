@@ -14,6 +14,7 @@ class Settings:
         for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
         if origin.strip()
     )
+    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
 
 
 settings = Settings()
