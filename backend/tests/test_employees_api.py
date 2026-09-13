@@ -83,6 +83,87 @@ def test_create_employee_returns_201_with_generated_fields(client, in_memory_ses
     assert body["salary_usd"] == "80000.00"
 
 
+def test_create_employee_with_duplicate_email_returns_409(client, in_memory_session_factory):
+    ids = _seed_employees(in_memory_session_factory)
+
+    response = client.post(
+        "/api/v1/employees",
+        json={
+            "first_name": "Nina",
+            "last_name": "Rao",
+            "email": "jane.doe@example.com",  # already used by the seeded employee
+            "department_id": ids["department_id"],
+            "country_id": ids["country_id"],
+            "job_title": "Data Analyst",
+            "job_level": "IC1",
+            "salary_local": "80000.00",
+            "hire_date": "2026-02-01",
+        },
+    )
+
+    assert response.status_code == 409
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_update_employee_with_another_employees_email_returns_409(client, in_memory_session_factory):
+    ids = _seed_employees(in_memory_session_factory)
+    other = client.post(
+        "/api/v1/employees",
+        json={
+            "first_name": "Sam",
+            "last_name": "Lee",
+            "email": "sam.lee@example.com",
+            "department_id": ids["department_id"],
+            "country_id": ids["country_id"],
+            "job_title": "Data Analyst",
+            "job_level": "IC1",
+            "salary_local": "80000.00",
+            "hire_date": "2026-02-01",
+        },
+    ).json()
+
+    response = client.put(
+        f"/api/v1/employees/{other['id']}",
+        json={
+            "first_name": "Sam",
+            "last_name": "Lee",
+            "email": "jane.doe@example.com",  # collides with the seeded employee
+            "department_id": ids["department_id"],
+            "country_id": ids["country_id"],
+            "job_title": "Data Analyst",
+            "job_level": "IC1",
+            "salary_local": "80000.00",
+            "hire_date": "2026-02-01",
+            "employment_status": "Active",
+        },
+    )
+
+    assert response.status_code == 409
+
+
+def test_update_employee_keeping_its_own_email_returns_200(client, in_memory_session_factory):
+    ids = _seed_employees(in_memory_session_factory)
+
+    response = client.put(
+        f"/api/v1/employees/{ids['employee_id']}",
+        json={
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "email": "jane.doe@example.com",  # unchanged
+            "department_id": ids["department_id"],
+            "country_id": ids["country_id"],
+            "job_title": "Software Engineer",
+            "job_level": "IC2",
+            "salary_local": "100000.00",
+            "hire_date": "2024-01-15",
+            "employment_status": "Active",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["last_name"] == "Smith"
+
+
 def test_update_employee_returns_updated_fields(client, in_memory_session_factory):
     ids = _seed_employees(in_memory_session_factory)
 

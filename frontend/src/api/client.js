@@ -12,16 +12,16 @@ export class ApiError extends Error {
 function buildQueryString(params) {
   const searchParams = new URLSearchParams()
   for (const [key, value] of Object.entries(params ?? {})) {
-    if (value === undefined || value === null) continue
+    // '' is treated the same as unset -- a cleared search box should send no `search` param at
+    // all, not a literal `search=` (which would be a distinct, redundant cache key/request).
+    if (value === undefined || value === null || value === '') continue
     searchParams.set(key, value)
   }
   const query = searchParams.toString()
   return query ? `?${query}` : ''
 }
 
-export async function apiFetch(path, params) {
-  const response = await fetch(`${BASE_URL}${path}${buildQueryString(params)}`)
-
+async function handleResponse(response, path) {
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     throw new ApiError(`Request to ${path} failed with status ${response.status}`, {
@@ -31,4 +31,22 @@ export async function apiFetch(path, params) {
   }
 
   return response.json()
+}
+
+export async function apiFetch(path, params) {
+  const response = await fetch(`${BASE_URL}${path}${buildQueryString(params)}`)
+  return handleResponse(response, path)
+}
+
+// Sibling to apiFetch for writes. Kept as a separate function (rather than widening apiFetch's
+// signature) so every existing GET call site -- kpis.js, breakdowns.js, lookups.js, employees.js's
+// own reads -- stays untouched, and so "builds a query string" and "sends a body" stay two things
+// a reader can look at separately instead of one function branching on which one was meant.
+export async function apiMutate(path, { method, body } = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  return handleResponse(response, path)
 }

@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import Select, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager
 
+from app.errors import ConflictError
 from app.models.country import Country
 from app.models.department import Department
 from app.models.employee import Employee
@@ -173,7 +175,10 @@ def list_employees(db: Session, params: EmployeeListParams) -> EmployeeListResul
     employees = (
         db.scalars(
             base_query.options(contains_eager(Employee.department), contains_eager(Employee.country))
-            .order_by(order_clause)
+            # Employee.id.asc() is a tiebreaker: without it, paginating a sort on a low-cardinality
+            # column (job_level, department, country) lets SQLite order tied rows differently between
+            # requests, so a row can repeat across two pages or be skipped entirely.
+            .order_by(order_clause, Employee.id.asc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -199,6 +204,13 @@ def get_employee(db: Session, employee_id: int) -> EmployeeDetailRow | None:
     return _to_detail_row(employee)
 
 
+def _email_in_use(db: Session, email: str, *, exclude_employee_id: int | None = None) -> bool:
+    query = select(Employee.id).where(Employee.email == email)
+    if exclude_employee_id is not None:
+        query = query.where(Employee.id != exclude_employee_id)
+    return db.scalar(query) is not None
+
+
 def create_employee(db: Session, request: EmployeeCreateRequest) -> EmployeeDetailRow:
     if db.get(Department, request.department_id) is None:
         raise ValueError(f"department {request.department_id} not found")
@@ -206,6 +218,9 @@ def create_employee(db: Session, request: EmployeeCreateRequest) -> EmployeeDeta
     country = db.get(Country, request.country_id)
     if country is None:
         raise ValueError(f"country {request.country_id} not found")
+
+    if _email_in_use(db, request.email):
+        raise ConflictError(f"email {request.email} is already in use by another employee")
 
     next_id = (db.scalar(select(func.max(Employee.id))) or 0) + 1
     employee = Employee(
@@ -223,7 +238,14 @@ def create_employee(db: Session, request: EmployeeCreateRequest) -> EmployeeDeta
         employment_status=request.employment_status,
     )
     db.add(employee)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as error:
+        # Backstop for races or unique columns the pre-check above doesn't cover (e.g. employee_code,
+        # generated from max(id)+1 and thus vulnerable to a concurrent insert). Deliberately generic --
+        # the pre-check above is what gives a precise "email already in use" message.
+        db.rollback()
+        raise ConflictError("could not create employee: a unique field conflicts with an existing employee") from error
     db.refresh(employee)
     return _to_detail_row(employee)
 
@@ -239,6 +261,9 @@ def update_employee(db: Session, employee_id: int, request: EmployeeUpdateReques
     country = db.get(Country, request.country_id)
     if country is None:
         raise ValueError(f"country {request.country_id} not found")
+
+    if _email_in_use(db, request.email, exclude_employee_id=employee_id):
+        raise ConflictError(f"email {request.email} is already in use by another employee")
 
     if request.salary_local != employee.salary_local:
         db.add(
@@ -261,7 +286,11 @@ def update_employee(db: Session, employee_id: int, request: EmployeeUpdateReques
     employee.hire_date = request.hire_date
     employee.employment_status = request.employment_status
 
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        raise ConflictError("could not update employee: a unique field conflicts with an existing employee") from error
     db.refresh(employee)
     return _to_detail_row(employee)
 

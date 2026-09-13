@@ -35,17 +35,39 @@ Worst case is ~25ms server-side, imperceptible next to network/render time. This
 
 `frontend-dashboard.md` explicitly deferred debouncing "until a future filter is a free-text field." This is that field. `src/lib/useDebouncedValue.js` is a ~10-line hook (`useState` + `useEffect` + `setTimeout`) rather than a new dependency — the need is narrow enough that a library would be more code, not less. The `Input` itself updates immediately (so typing feels responsive); only the *debounced* value feeds the query key, so keystrokes don't each trigger a network request or a table flicker. 300ms delay.
 
-### Filter or search changes reset to page 1; sort changes don't
+### Filter, search, or page-size changes reset to page 1; sort changes don't
 
-The dashboard has no pagination, so this case didn't exist yet. Narrowing a filter while sitting on page 12 of the old result set would silently land on an out-of-range or misleading page. Changing `department_id`/`country_id`/`employment_status`/`search` resets `page` to 1; changing `sort_by`/`sort_dir` or `page_size` does not, since re-sorting or widening the page size while staying on the current page is the expected behavior (and the backend clamps `page` anyway if it ends up out of range).
+The dashboard has no pagination, so this case didn't exist yet. Narrowing a filter while sitting on page 12 of the old result set would silently land on an out-of-range or misleading page. Changing `department_id`/`country_id`/`employment_status`/`search`/`page_size` resets `page` to 1; changing `sort_by`/`sort_dir` does not, since re-sorting while staying on the current page is the expected behavior. `page_size` is grouped with the filters, not with sort: moving from page 12 of 25-row pages to 100-row pages would land on rows 1101–1200, almost certainly past the end of the result set.
+
+**The backend does not clamp the high end.** `EmployeeListParams.clamped_page` is `max(page, 1)` — a floor only. Requesting a `page` past the last one returns `items: []` with a normal 200, not an error and not a silently-corrected page number. Two consequences: the page-reset rule above is load-bearing (nothing downstream will save us if we get it wrong), and `EmployeesPage` still has to handle the case directly — if a request in flight was for a page that's now out of range (e.g. a slow response lands after someone already narrowed a filter), it renders "No employees on this page" with a **Go to first page** action, rather than an empty table with no explanation.
 
 ### Sorting and pagination are entirely server-driven
 
 Clicking a column header updates `sort_by`/`sort_dir` in the same params object that already drives every other filter; the `useEmployees` hook (already generic — it takes a params object it doesn't need to know the shape of) refetches exactly like a filter change. No client-side re-sort of the fetched page. This matches the Performance numbers above: the server computing order over an index is materially cheaper and simpler than re-sorting a page of already-truncated rows in JS, and it means "sorted by salary_usd descending" is correct across the *whole* 10,000-row set, not just within whatever page happened to be loaded.
 
+**Only columns in `employee_service.py`'s `_SORT_COLUMNS` are clickable**, and the UI must send the exact strings that dict uses as keys — anything else (including a plausible-looking but wrong key) silently falls back to sorting by `last_name` via `.get(sort_by, DEFAULT)`, with no error and no signal that the fallback happened. Confirmed against the current dict:
+
+| Column | `sort_by` value |
+|---|---|
+| Name | `last_name` |
+| Employee code | `employee_code` |
+| Department | `department` (not `department_name`) |
+| Country | `country` (not `country_name`) |
+| Job title | `job_title` |
+| Job level | `job_level` |
+| Salary (USD) | `salary_usd` |
+| Hire date | `hire_date` |
+| Status | *(none — see below)* |
+
+**`employment_status` is deliberately not sortable.** It isn't in `_SORT_COLUMNS` at all, so a clickable Status header would render a sort arrow that does nothing — worse than no affordance, since it looks broken rather than absent. The column stays a plain header with no click handler and no arrow.
+
+**Deep pagination on a low-cardinality sort needs a backend fix first.** `list_employees`'s `order_by(order_clause)` has no secondary tiebreaker. Sorting by `job_level`/`department`/`country` — each with only a handful of distinct values across 10,000 rows — combined with `OFFSET`/`LIMIT` means SQLite is free to order tied rows differently between two otherwise-identical queries; a row can repeat on two pages or be skipped entirely. Fix: `order_by(order_clause, Employee.id.asc())`. One line, and it's what makes "page through everyone sorted by department" actually enumerate everyone exactly once.
+
 ### Hand-rolled Prev/Next pagination, plus a page-size selector
 
-Shadcn's Base UI kit doesn't have a stock pagination primitive worth pulling in for two buttons and a page count — same "does this dependency earn itself" judgment as the dashboard's native `<input type="date">` decision. `EmployeePagination` is `< Prev` / `Page X of Y (N total)` / `Next >`, with Prev disabled on page 1 and Next disabled on the last page. A page-size `<Select>` (25 / 50 / 100, matching the backend's own clamp) is included — it's a single trivial control, and the Performance numbers show page size doesn't meaningfully change server cost, so there's no reason to hide it behind "advanced" anything.
+Shadcn's registry *does* include a `Pagination` component (checked directly against `ui.shadcn.com/docs/components` — an earlier draft of this doc claimed otherwise, which was wrong). It doesn't fit here for a more specific reason than "no primitive exists": `PaginationLink`/`PaginationPrevious`/`PaginationNext` render `<a href>` anchors by default, built for URL-driven pagination (a Next.js `<Link>` swap-in is the documented customization path). Our page number lives in React state, not the URL — there's no route to link to. Adopting the component would mean overriding every anchor into a button anyway, which is more code than the two buttons it replaces. Same "does this dependency earn itself" judgment as the dashboard's native `<input type="date">` decision, just resolved for a real reason instead of an invented one.
+
+`EmployeePagination` is `< Prev` / `Page X of Y (N total)` / `Next >`, with Prev disabled on page 1 and Next disabled on the last page. A page-size `<Select>` (25 / 50 / 100, matching the backend's own clamp) is included — it's a single trivial control, and the Performance numbers show page size doesn't meaningfully change server cost, so there's no reason to hide it behind "advanced" anything. Changing it resets `page` to 1 (see above).
 
 ### Status shown as a colored `Badge`, not plain text
 
@@ -53,7 +75,19 @@ An HR manager scanning 25–100 rows for who's inactive benefits from a color th
 
 ### One shared `EmployeeFormDialog` for create and edit
 
-`EmployeeCreateRequest` and `EmployeeUpdateRequest` are the same field set (create additionally defaults `employment_status`). `EmployeeFormDialog` takes an optional `employee` prop: absent means create (empty form, `useCreateEmployee`), present means edit (pre-filled, `useUpdateEmployee`). One component, one set of field markup, instead of two dialogs that would drift out of sync. Plain controlled `useState` per field — no `react-hook-form`: the form is a flat object with no cross-field or async validation, so native HTML validation (`required`, `type="email"`, `type="number" min="0"` on salary) covers the boundary cases that matter for a single HR user filling one form at a time. The backend stays the real source of truth (422 on a bad department/country id, 409 on a duplicate email — see below); the dialog surfaces whatever `detail` string comes back in an inline error banner rather than re-deriving its own validation rules.
+`EmployeeCreateRequest` and `EmployeeUpdateRequest` are the same field set (create additionally defaults `employment_status`). `EmployeeFormDialog` takes a `mode` (`'create'` | `'edit'`) and, in edit mode, an `employeeId`: create means an empty form (`useCreateEmployee`), edit means pre-filled (`useUpdateEmployee`). One component, one set of field markup, instead of two dialogs that would drift out of sync.
+
+**Edit mode cannot prefill from the list row.** `EmployeeSummary` — the shape `EmployeeTable`'s rows already have — omits `salary_local`, `currency_code`, `department_id`, and `country_id` entirely. `PUT /employees/{id}` (`EmployeeUpdateRequest`) is a **full replace** with no defaults: every field, including `employment_status`, must be sent. Prefilling from the row would put `salary_usd` into the `salary_local` field, silently overwrite the employee's real local pay, and write a bogus `SalaryHistory` row (history is logged purely on a `salary_local` inequality — `employee_service.py:243-250` — so it can't tell a genuine change from a unit-mismatch). Edit mode therefore fetches `GET /employees/{id}` (`useEmployee(id, {enabled: open})`) and prefills from that.
+
+This also rules out the obvious-looking `useState(() => employee.salaryLocal)` initializer pattern: a `useState` initializer runs once, on mount, while the query is still loading and its data is `undefined` — the form would render empty and never re-sync once the fetch resolves. Instead the dialog gates rendering the form body on the query's `isSuccess`, so the fields (and their `useState` initializers) never mount until real data exists. Nothing resets a field via `useEffect`; the field simply isn't there until there's something correct to put in it.
+
+Plain controlled `useState` per field — no `react-hook-form`: the form is a flat object with no cross-field or async validation beyond the one currency rule below, so native HTML validation (`required`, `type="email"`, `type="number" min="0"` on salary) covers the boundary cases that matter for a single HR user filling one form at a time. The backend stays the real source of truth (422 on a bad department/country id, 409 on a duplicate email — see below); the dialog surfaces the mutation's error in an inline banner rather than re-deriving its own validation rules. That banner has to handle `detail` being either a string (the 409/422 cases this doc's backend fix raises) or FastAPI's own array-of-objects shape (body-validation 422s) — a naive `{error.detail}` renders `[object Object]` on the latter, so a small `formatApiErrorDetail()` helper normalizes both to a string before display.
+
+### Changing an employee's country re-denominates their salary
+
+The backend computes `salary_usd = salary_local × Country.fx_rate_to_usd` at write time, using whatever country is on the request — not the employee's country before the edit. If the form lets someone switch the country `<Select>` without touching the salary number, the *same* number gets reinterpreted in a different currency: change India to the US on a ₹1,000,000 salary and the backend saves it as $1,000,000, a ~83x error with no validation to catch it (both are positive numbers, both are plausible salaries in isolation).
+
+Fix: the salary input always shows its currency inline (`Salary (INR)`, driven by the selected country's `currencyCode`, not a fixed label), and **changing the country clears the salary field** with an inline hint — "Country changed — re-enter salary in USD." This forces a deliberate re-entry instead of a silent reinterpretation. In create mode this is a no-op if the field is already empty.
 
 ### Deactivate needs a confirmation step
 
@@ -67,15 +101,31 @@ Considered a separate "salary history" action, but an HR user checking someone's
 
 `src/api/client.js`'s `apiFetch` only ever built a query string and called `fetch(url)` — there was no consumer of POST/PUT/PATCH until now. Rather than reshape `apiFetch`'s signature (and touch every existing call site in `kpis.js`/`breakdowns.js`/`lookups.js`/`employees.js` for a capability they don't need), the non-2xx-handling logic is pulled into a shared `handleResponse` helper, and a sibling `apiMutate(path, {method, body})` sends a JSON body with the same `ApiError` behavior. Smaller diff, and it keeps "builds a query string" and "sends a body" as two things a reader can look at separately instead of one function branching on which one you meant.
 
-### Backend fix: duplicate email currently raises an unhandled 500
+The query-string builder also gets a small fix while it's open: it currently drops `undefined`/`null` params but not `''` — clearing the search box sends a literal `search=` on the wire, which is a distinct cache key and network request for a result identical to "no search filter at all." Normalize `''` to `undefined` before building params.
 
-Found while designing the create-dialog's error handling: `employee_service.create_employee`/`update_employee` never catch the unique-`email` constraint. A duplicate email today raises an unhandled `IntegrityError` — FastAPI turns that into a bare 500 with no usable `detail`, which is the single most likely validation failure an HR user will actually hit (typo'd or reused email) and the one case the dialog's error banner couldn't show anything useful for. Small backend fix, included here rather than filed as a separate doc: catch `IntegrityError`, roll back, raise `HTTPException(409, detail="Email already in use")`.
+### Backend fix: duplicate email/employee_code currently raise an unhandled 500 or get mislabeled
+
+`employee_service.create_employee`/`update_employee` never catch the unique-constraint violations on `email` or `employee_code` (both `unique=True`). Today either one raises an unhandled `IntegrityError` — FastAPI turns that into a bare 500 with no usable `detail`. A duplicate email is the single most likely validation failure an HR user will actually hit (typo'd or reused email), so it needs a clean 409.
+
+The naive fix — blanket `catch IntegrityError → 409 "Email already in use"` — would mislabel a different failure: `employee_code` is also `unique=True`, generated from `max(id)+1`, and while a collision there is unlikely it isn't impossible, and the message would lie about which field caused it. Instead:
+
+- An explicit pre-check for a duplicate email (a `SELECT` before the insert/update, excluding the employee's own row on update so keeping your own email isn't rejected) raises a `ConflictError` (a small `ValueError` subclass, so the router's existing `except ValueError → 422` still catches it as a fallback if the new handler is ever bypassed) with a precise message.
+- A narrow `except IntegrityError` backstop around the actual write still exists, for the `employee_code` case (and any other unique constraint added later) — but raises a *generic* conflict message rather than claiming it was the email.
+- The router adds `except ConflictError → HTTPException(409, str(error))`, ordered above the existing `ValueError → 422` handler.
+
+This keeps the existing "service raises domain errors, router translates to HTTP" layering intact rather than raising `HTTPException` directly from the service.
 
 ## Data Flow
 
-`EmployeesPage` owns one `params` object (`page`, `page_size`, `department_id`, `country_id`, `employment_status`, `search`, `sort_by`, `sort_dir`) via `useState`, passed whole to `useEmployees` — same "one filter shape, `useState` at the page level" pattern as `DashboardPage`. `EmployeeFilterBar` and `EmployeeTable`'s sortable headers both call `onParamsChange` with a patch; `EmployeesPage` merges it and resets `page` to 1 when a filter/search field (not sort/page_size) changed. `EmployeePagination` calls it directly for `page`/`page_size`.
+`EmployeesPage` owns one `params` object (`page`, `page_size`, `department_id`, `country_id`, `employment_status`, `search`, `sort_by`, `sort_dir`) via `useState`, passed whole to `useEmployees` — same "one filter shape, `useState` at the page level" pattern as `DashboardPage`. `EmployeeFilterBar` and `EmployeeTable`'s sortable headers both call `onParamsChange` with a patch; `EmployeesPage` merges it and resets `page` to 1 when anything other than `sort_by`/`sort_dir` changed (that includes `page_size` — see above).
 
-Row actions (`View`, `Edit`, `Deactivate`) are owned by `EmployeeTable`, which renders the three dialogs (lazily, one active row's worth at a time) and the mutation hooks. Every mutation invalidates the `['employees', 'list']` query-key prefix on success, so the currently-visible page refetches with fresh data — no optimistic updates, no manual cache patching; the dialog just closes and the list catches up, matching the dashboard's existing "no retry button, no shimmer" preference for simplicity over perceived-speed polish.
+`EmployeesPage` also owns dialog state directly, as a single `{mode, employeeId}` pair (`mode` one of `null`/`'create'`/`'edit'`/`'view'`/`'deactivate'`) — **not** `EmployeeTable`, which only renders row-action buttons that call callbacks up to the page. At most one dialog is mounted at a time, keyed by `key={employeeId ?? 'new'}`. This is deliberate, not incidental: without a shared key, closing an edit dialog for employee A and opening one for employee B would reuse the same component instance, and a `useState`-per-field form (or a mutation's `error` state) would still be holding A's values or A's stale error banner when B's dialog appears. The keyed remount discards both for free — no `useEffect` reset, no explicit `.reset()` call needed on the mutation.
+
+Every mutation invalidates the `['employees']` key-prefix (not just `['employees', 'list']` — TanStack Query's default prefix matching would miss `['employees', 'detail', id]` and the salary-history key otherwise) **and** `['kpis']`/`['breakdowns']`, via one shared `invalidateEmployeeData(queryClient)` helper. The KPI/breakdown invalidation matters because editing, creating, or deactivating an employee changes headcount and average-salary aggregates — with `queryClient`'s `staleTime: 60_000`, the dashboard would otherwise show stale numbers for up to a minute after a change made on this page. No optimistic updates, no manual cache patching; the dialog just closes and the affected views catch up, matching the dashboard's existing "no retry button, no shimmer" preference for simplicity over perceived-speed polish.
+
+## Known limitation: salary-history currency labeling
+
+`get_salary_history`'s `_to_detail_row` labels every history row with the employee's **current** country's `currency_code` — but `SalaryHistory` itself stores only a bare local-currency amount, no currency of its own. If an employee's country is ever changed (a legitimate Edit), every history row recorded before that change is retroactively mislabeled: an amount that was genuinely in INR at the time now displays with whatever currency code the employee's country happens to be today. The correct fix is a `currency_code` column on `SalaryHistory`, captured at write time — that's a schema change (migration, backfill decision for existing rows) and is out of scope for this UI pass. Documenting it here rather than letting the UI imply a guarantee ("history shown in the employee's currency") that the data doesn't actually back up in this edge case.
 
 ## Deliberately Excluded
 
@@ -88,41 +138,48 @@ Row actions (`View`, `Edit`, `Deactivate`) are owned by `EmployeeTable`, which r
 
 ## Subtasks
 
+- [ ] Backend: `app/errors.py` with `ConflictError(ValueError)`
+- [ ] Backend: `list_employees` — add `Employee.id.asc()` secondary sort + regression test
+- [ ] Backend: explicit duplicate-email pre-check (self-excluding on update) + generic `IntegrityError` backstop in `create_employee`/`update_employee` → `409` via `ConflictError` + tests
 - [ ] `npx shadcn add table dialog alert-dialog input label badge`
-- [ ] Backend: catch `IntegrityError` on duplicate email in `create_employee`/`update_employee` → `409` + test
-- [ ] `src/api/client.js`: extract `handleResponse`, add `apiMutate`
+- [ ] `src/api/client.js`: extract `handleResponse`, add `apiMutate`, normalize `''` params to `undefined`
+- [ ] `src/lib/apiError.js`: `formatApiErrorDetail` (string passthrough + FastAPI array shape + fallback)
 - [ ] `src/api/employees.js`: `fetchEmployee`, `createEmployee`, `updateEmployee`, `deactivateEmployee`, `fetchSalaryHistory` + mappers
 - [ ] `src/lib/useDebouncedValue.js`
-- [ ] `src/lib/queryKeys.js`: `employees.detail(id)`, `employees.salaryHistory(id)`
-- [ ] `src/hooks/useEmployee.js`, `useSalaryHistory.js` (query, `enabled`-gated), `useCreateEmployee.js`, `useUpdateEmployee.js`, `useDeactivateEmployee.js` (mutations)
+- [ ] `src/lib/queryKeys.js`: `employees.detail(id)`, `employees.salaryHistory(id)`, root keys for `employees`/`kpis`/`breakdowns`
+- [ ] `src/lib/invalidateEmployeeData.js`
+- [ ] `src/hooks/useEmployee.js`, `useSalaryHistory.js` (query, `enabled`-gated), `useCreateEmployee.js`, `useUpdateEmployee.js`, `useDeactivateEmployee.js` (mutations, call `invalidateEmployeeData` on success)
 - [ ] `src/components/employees/EmployeeFilterBar.jsx`
-- [ ] `src/components/employees/EmployeeTable.jsx` (sortable headers, status `Badge`, row actions)
+- [ ] `src/components/employees/EmployeeTable.jsx` (sortable headers restricted to the verified allow-list, status `Badge`, row-action callbacks only — no dialog state)
 - [ ] `src/components/employees/EmployeePagination.jsx`
-- [ ] `src/components/employees/EmployeeFormDialog.jsx`
+- [ ] `src/components/employees/EmployeeFormDialog.jsx` (fetches detail in edit mode, gated on `isSuccess`; clears salary on country change)
 - [ ] `src/components/employees/EmployeeDetailDialog.jsx`
-- [ ] Wire it all into `src/pages/EmployeesPage.jsx`
+- [ ] `src/components/employees/DeactivateEmployeeDialog.jsx`
+- [ ] `src/pages/EmployeesPage.jsx`: params state, hoisted `{mode, employeeId}` dialog state (keyed remount), out-of-range-page handling
 - [ ] Tests (see Test Cases)
 
 ## Test Cases
 
 | Test | Verifies |
 |---|---|
-| `test_employees_api.py` (extends existing) | Creating/updating with an email already in use returns `409` with a clear `detail`, not an unhandled `500` |
-| `client.test.js` (extends existing) | `apiMutate` sends the given method + a JSON-encoded body; non-2xx still throws `ApiError` with status + detail |
+| `test_employees_api.py` (extends existing) | Creating with an in-use email returns `409` with a clear `detail`; updating to another employee's email returns `409`; updating an employee while keeping its own email succeeds (self-exclusion) |
+| `test_employee_service.py` (extends existing) | Paginating a sort on a low-cardinality column returns every row exactly once across pages (tiebreaker regression) |
+| `client.test.js` (extends existing) | `apiMutate` sends the given method + a JSON-encoded body; non-2xx still throws `ApiError` with status + detail; an empty-string param is dropped like `undefined` |
+| `apiError.test.js` | A string `detail` passes through unchanged; FastAPI's `[{loc, msg, type}]` array becomes readable text; a missing/malformed `detail` falls back to a generic message |
 | `employees.test.js` (extends existing) | `createEmployee`/`updateEmployee` call `apiMutate` with the right method/path/body; `deactivateEmployee` sends `PATCH`; `fetchSalaryHistory` maps `hike_percent`/salary fields from wire strings to numbers |
 | `useDebouncedValue.test.js` | Value only updates after the delay elapses; a value change before the delay resets the timer (fake timers) |
 | `EmployeeFilterBar.test.jsx` | Department/country/status selects call `onParamsChange` like the dashboard's `FilterBar`; typing in search only calls it once, after the debounce settles |
-| `EmployeeTable.test.jsx` | Renders rows from a stubbed `useEmployees` result; clicking a sortable header calls `onParamsChange` with the toggled `sort_by`/`sort_dir`; each `employment_status` renders its own `Badge` variant |
+| `EmployeeTable.test.jsx` | Renders rows from a stubbed `useEmployees` result; clicking a sortable header calls `onParamsChange` with the toggled `sort_by`/`sort_dir` using the correct allow-list value (e.g. `"department"`, not `"department_name"`); the Status header has no click handler and renders no sort arrow; each `employment_status` renders its own `Badge` variant |
 | `EmployeePagination.test.jsx` | Prev disabled on page 1, Next disabled on the last page; changing page size calls `onParamsChange` with `page_size` and resets `page` to 1 |
-| `EmployeeFormDialog.test.jsx` | With no `employee` prop, submitting calls the create mutation with form values; with one, calls update with pre-filled values; a `409`/`422` from the mutation renders its `detail` in an inline banner instead of closing the dialog |
+| `EmployeeFormDialog.test.jsx` | Edit mode renders no form fields until the detail query resolves (`isSuccess`), then prefills from the detail response, not the list row; changing the country clears the salary field and updates the currency label; submitting sends the complete `EmployeeUpdateRequest` field set; a `409`/`422` from the mutation renders `formatApiErrorDetail(error)` in an inline banner instead of closing the dialog |
 | `EmployeeDetailDialog.test.jsx` | Renders employee detail fields and salary-history rows from stubbed hooks; hooks are not called (`enabled: false`) until the dialog is open |
-| `EmployeesPage.test.jsx` | Integration: picking a department filter resets `page` to 1; sorting does not; a full create→refetch flow with all hooks mocked |
+| `EmployeesPage.test.jsx` | Integration: picking a department filter resets `page` to 1; sorting does not; opening the edit dialog for employee B right after closing one for employee A shows no leaked field values or error banner; a successful create invalidates employees, KPIs, and breakdowns; landing on an out-of-range page (empty `items`, nonzero `total_items`) shows the "go to first page" state |
 
 Deliberately not tested: shadcn `table`/`dialog`/`alert-dialog`/`badge` internals (vendored); the deactivate confirmation dialog's own copy (trivial, covered indirectly by the row-action test); exhaustive filter-combination matrix (same reasoning as the dashboard doc — one filter proven per component tests the pattern, not new risk).
 
 ## Verification
 
-1. `npm run test` — all green.
-2. `pytest` (backend) — the new 409 test passes.
+1. `npm run test:run` — all green (`npm run test` is watch mode, not the CI-style run).
+2. `pytest` (backend) — the new 409, self-exclusion, and tiebreaker tests all pass.
 3. `npm run build`.
-4. End-to-end against the 10k-seeded dev DB (not the throwaway perf DB): seed, run the backend, `npm run dev`, and click through: paginate to a deep page, sort by salary descending, search a partial name, create an employee, edit it, view its salary history after the edit (confirms the history entry appeared), deactivate it, and confirm a duplicate-email create shows a clean inline error instead of a crash.
+4. End-to-end against the 10k-seeded dev DB (not the throwaway perf DB): seed, run the backend, `npm run dev`, and click through: paginate to a deep page on a low-cardinality sort (no repeats/gaps), sort by salary descending, search a partial name (one request, debounced), create an employee, edit it (including a country change — confirm the salary clears), view its salary history after the edit (confirms the history entry appeared), deactivate it, and confirm a duplicate-email create shows a clean inline error instead of a crash.

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.errors import ConflictError
 from app.schemas.common import DEFAULT_EMPLOYMENT_STATUS
 from app.schemas.employee import (
     EmployeeCreateRequest,
@@ -68,6 +69,8 @@ def get_employee(employee_id: int, db: Session = Depends(get_db)) -> EmployeeDet
 def create_employee(request: EmployeeCreateRequest, db: Session = Depends(get_db)) -> EmployeeDetailResponse:
     try:
         row = employee_service.create_employee(db, request)
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return EmployeeDetailResponse.model_validate(row)
@@ -79,6 +82,8 @@ def update_employee(
 ) -> EmployeeDetailResponse:
     try:
         row = employee_service.update_employee(db, employee_id, request)
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     if row is None:
