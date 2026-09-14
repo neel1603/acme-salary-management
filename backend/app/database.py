@@ -16,7 +16,16 @@ class Base(DeclarativeBase):
 
 
 def create_engine_with_foreign_keys_enabled(database_url: str, *, use_static_pool: bool = False) -> Engine:
-    """SQLite does not enforce foreign key constraints unless told to, per connection."""
+    """SQLite does not enforce foreign key constraints unless told to, per connection.
+
+    Non-SQLite databases (e.g. Postgres) enforce them natively and need none of this --
+    pool_pre_ping instead, since a hosted free-tier instance (Neon) can suspend an idle
+    connection and pre-ping transparently detects/recycles it instead of surfacing a raw
+    "server closed the connection" error on the next request.
+    """
+    if not database_url.startswith("sqlite"):
+        return create_engine(database_url, pool_pre_ping=True)
+
     engine_kwargs: dict = {"connect_args": {"check_same_thread": False}}
     if use_static_pool:
         engine_kwargs["poolclass"] = StaticPool
