@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AiQueryBox } from '@/components/dashboard/AiQueryBox'
 import { CountryBreakdownChart } from '@/components/dashboard/CountryBreakdownChart'
 import { DepartmentBreakdownChart } from '@/components/dashboard/DepartmentBreakdownChart'
 import { FilterBar } from '@/components/dashboard/FilterBar'
@@ -24,6 +25,7 @@ export function DashboardPage() {
           <CountryBreakdownChart filters={filters} />
         </section>
       </div>
+      <AiQueryBox />
     </div>
   )
 }

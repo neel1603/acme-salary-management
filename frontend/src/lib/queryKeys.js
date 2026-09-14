@@ -1,4 +1,7 @@
 export const queryKeys = {
+  aiQuery: {
+    status: () => ['aiQuery', 'status'],
+  },
   lookups: {
     countries: () => ['lookups', 'countries'],
     departments: () => ['lookups', 'departments'],

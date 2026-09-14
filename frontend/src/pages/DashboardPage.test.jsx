@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { useAiQuery } from '@/hooks/useAiQuery'
+import { useAiQueryStatus } from '@/hooks/useAiQueryStatus'
 import { useCountryBreakdown } from '@/hooks/useCountryBreakdown'
 import { useDepartmentBreakdown } from '@/hooks/useDepartmentBreakdown'
 import { useKpiSummary } from '@/hooks/useKpiSummary'
@@ -11,6 +13,8 @@ vi.mock('@/hooks/useKpiSummary')
 vi.mock('@/hooks/useDepartmentBreakdown')
 vi.mock('@/hooks/useCountryBreakdown')
 vi.mock('@/hooks/useLookups')
+vi.mock('@/hooks/useAiQueryStatus')
+vi.mock('@/hooks/useAiQuery')
 
 function mockHooksSteady() {
   useKpiSummary.mockReturnValue({
@@ -24,6 +28,8 @@ function mockHooksSteady() {
     countries: { data: [{ id: 5, name: 'Canada' }] },
     departments: { data: [{ id: 1, name: 'Engineering' }] },
   })
+  useAiQueryStatus.mockReturnValue({ data: { available: true } })
+  useAiQuery.mockReturnValue({ status: 'idle', answer: '', grounding: [], errorMessage: null, ask: vi.fn() })
 }
 
 describe('DashboardPage', () => {
@@ -35,6 +41,15 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.getByText('Headcount')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'By Department' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'By Country' })).toBeInTheDocument()
+  })
+
+  it('renders AiQueryBox alongside the existing dashboard sections', () => {
+    mockHooksSteady()
+
+    render(<DashboardPage />)
+
+    expect(screen.getByText('Ask a question')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'By Country' })).toBeInTheDocument()
   })
 

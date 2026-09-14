@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export class ApiError extends Error {
   constructor(message, { status, detail } = {}) {
@@ -21,12 +21,18 @@ function buildQueryString(params) {
   return query ? `?${query}` : ''
 }
 
+// Shared with streamAiQuery (src/api/aiQuery.js), which needs the same "read the JSON body, pull
+// out detail" step for its own non-2xx responses but reports it via a callback instead of throwing.
+export async function extractErrorDetail(response) {
+  const body = await response.json().catch(() => null)
+  return body?.detail
+}
+
 async function handleResponse(response, path) {
   if (!response.ok) {
-    const body = await response.json().catch(() => null)
     throw new ApiError(`Request to ${path} failed with status ${response.status}`, {
       status: response.status,
-      detail: body?.detail,
+      detail: await extractErrorDetail(response),
     })
   }
 

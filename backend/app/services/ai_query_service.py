@@ -17,7 +17,7 @@ from app.services import employee_service, kpi_service
 
 # Pinned against Google's free-tier flash-class lineup as of implementation time; re-check
 # against Google AI Studio's current free-tier models if this ever needs to change.
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-3.6-flash"
 
 MAX_TOOL_ITERATIONS = 5
 MAX_SEARCH_PAGE_SIZE = 20
