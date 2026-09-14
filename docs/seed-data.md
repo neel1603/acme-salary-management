@@ -69,7 +69,7 @@ The brief calls for a salary band per `(department, job_level)` pair — hand-au
 
 ### `manager_id` left null for every seeded row
 
-`Employee.manager_id` is schema-only for now (no UI consumes it — see `database-schema.md` Deliberately Excluded / `requirements.md` Non-Goals). Populating a consistent org hierarchy across 10,000 rows would need topological assignment logic in service of a field nothing reads yet — deferred until a feature actually needs it.
+`Employee.manager_id` is left null for every seeded row.
 
 ### Salary sampled in USD space, then converted to local — never the other way round
 

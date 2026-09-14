@@ -51,7 +51,7 @@ The core table — one row per employee, current state only.
 | `salary_usd` | Numeric(14, 2) | not null | **Denormalized/precomputed** — see decision below |
 | `hire_date` | Date | not null, indexed | |
 | `employment_status` | String | not null, indexed | `Active` \| `Terminated` \| `On Leave` |
-| `manager_id` | Integer | FK → `Employee.id`, nullable | Self-referential; schema-only for now, no UI (see Non-Goals in `requirements.md`) |
+| `manager_id` | Integer | FK → `Employee.id`, nullable | Self-referential; schema-only for now, no UI (see Deliberately Excluded below) |
 | `created_at` | DateTime | not null, default now | |
 | `updated_at` | DateTime | not null, default now, on update now | |
 
