@@ -34,19 +34,21 @@ afterEach(() => {
 })
 
 describe('App routing', () => {
-  it('renders the Dashboard heading at /', () => {
+  it('renders the Dashboard heading at /', async () => {
     renderAt('/')
 
+    // Generous timeout: first resolution of the lazy DashboardPage chunk (pulls in recharts)
+    // can take longer than findByRole's default 1000ms window in a cold test run.
     expect(
-      screen.getByRole('heading', { name: 'Dashboard' }),
+      await screen.findByRole('heading', { name: 'Dashboard' }, { timeout: 5000 }),
     ).toBeInTheDocument()
   })
 
-  it('renders the Employees heading at /employees', () => {
+  it('renders the Employees heading at /employees', async () => {
     renderAt('/employees')
 
     expect(
-      screen.getByRole('heading', { name: 'Employees' }),
+      await screen.findByRole('heading', { name: 'Employees' }, { timeout: 5000 }),
     ).toBeInTheDocument()
   })
 
