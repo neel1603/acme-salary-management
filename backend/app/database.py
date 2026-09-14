@@ -53,3 +53,19 @@ def get_db() -> Iterator[Session]:
     """FastAPI dependency: a request-scoped session, via session_scope()."""
     with session_scope() as session:
         yield session
+
+
+def ensure_seeded() -> None:
+    """Create the schema and seed it if empty.
+
+    Cheap no-op once already seeded. Self-heals a fresh filesystem (e.g. a new Vercel
+    instance's wiped /tmp) without a separate manual seed step. Imports deferred to avoid
+    a circular import (app.seed.seed_data and app.models.employee both import from here).
+    """
+    from app.models.employee import Employee
+    from app.seed.seed_data import seed_database
+
+    Base.metadata.create_all(engine)
+    with session_scope() as session:
+        if session.query(Employee).first() is None:
+            seed_database(session)
