@@ -48,5 +48,5 @@ class Employee(Base):
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    department: Mapped["Department"] = relationship()
-    country: Mapped["Country"] = relationship()
+    department: Mapped[Department] = relationship()
+    country: Mapped[Country] = relationship()

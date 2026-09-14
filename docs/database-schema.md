@@ -95,7 +95,7 @@ Kept deliberately lightweight: no `reason`/`approved_by`/currency-change handlin
 
 SQLite has no built-in median/percentile aggregate function. Given the scale here (10,000 rows total, far fewer per filtered group), the KPI/breakdown services fetch the relevant `salary_usd` values and compute the median with Python's `statistics.median()`. Simple, correct, and fast at this data size.
 
-**Scaling limit** (documented, not solved here): at much larger scale, pulling all matching rows into Python stops being cheap. A production system at that scale would move to a database with native percentile support (e.g., Postgres `percentile_cont`) or maintain materialized rollups. Noted in `performance-considerations.md`.
+**Scaling limit** (documented, not solved here): at much larger scale, pulling all matching rows into Python stops being cheap. A production system at that scale would move to a database with native percentile support (e.g., Postgres `percentile_cont`) or maintain materialized rollups.
 
 ### Lookup tables instead of free-text columns
 

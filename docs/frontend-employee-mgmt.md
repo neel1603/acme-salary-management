@@ -138,25 +138,25 @@ Every mutation invalidates the `['employees']` key-prefix (not just `['employees
 
 ## Subtasks
 
-- [ ] Backend: `app/errors.py` with `ConflictError(ValueError)`
-- [ ] Backend: `list_employees` — add `Employee.id.asc()` secondary sort + regression test
-- [ ] Backend: explicit duplicate-email pre-check (self-excluding on update) + generic `IntegrityError` backstop in `create_employee`/`update_employee` → `409` via `ConflictError` + tests
-- [ ] `npx shadcn add table dialog alert-dialog input label badge`
-- [ ] `src/api/client.js`: extract `handleResponse`, add `apiMutate`, normalize `''` params to `undefined`
-- [ ] `src/lib/apiError.js`: `formatApiErrorDetail` (string passthrough + FastAPI array shape + fallback)
-- [ ] `src/api/employees.js`: `fetchEmployee`, `createEmployee`, `updateEmployee`, `deactivateEmployee`, `fetchSalaryHistory` + mappers
-- [ ] `src/lib/useDebouncedValue.js`
-- [ ] `src/lib/queryKeys.js`: `employees.detail(id)`, `employees.salaryHistory(id)`, root keys for `employees`/`kpis`/`breakdowns`
-- [ ] `src/lib/invalidateEmployeeData.js`
-- [ ] `src/hooks/useEmployee.js`, `useSalaryHistory.js` (query, `enabled`-gated), `useCreateEmployee.js`, `useUpdateEmployee.js`, `useDeactivateEmployee.js` (mutations, call `invalidateEmployeeData` on success)
-- [ ] `src/components/employees/EmployeeFilterBar.jsx`
-- [ ] `src/components/employees/EmployeeTable.jsx` (sortable headers restricted to the verified allow-list, status `Badge`, row-action callbacks only — no dialog state)
-- [ ] `src/components/employees/EmployeePagination.jsx`
-- [ ] `src/components/employees/EmployeeFormDialog.jsx` (fetches detail in edit mode, gated on `isSuccess`; clears salary on country change)
-- [ ] `src/components/employees/EmployeeDetailDialog.jsx`
-- [ ] `src/components/employees/DeactivateEmployeeDialog.jsx`
-- [ ] `src/pages/EmployeesPage.jsx`: params state, hoisted `{mode, employeeId}` dialog state (keyed remount), out-of-range-page handling
-- [ ] Tests (see Test Cases)
+- [x] Backend: `app/errors.py` with `ConflictError(ValueError)`
+- [x] Backend: `list_employees` — add `Employee.id.asc()` secondary sort + regression test
+- [x] Backend: explicit duplicate-email pre-check (self-excluding on update) + generic `IntegrityError` backstop in `create_employee`/`update_employee` → `409` via `ConflictError` + tests
+- [x] `npx shadcn add table dialog alert-dialog input label badge`
+- [x] `src/api/client.js`: extract `handleResponse`, add `apiMutate`, normalize `''` params to `undefined`
+- [x] `src/lib/apiError.js`: `formatApiErrorDetail` (string passthrough + FastAPI array shape + fallback)
+- [x] `src/api/employees.js`: `fetchEmployee`, `createEmployee`, `updateEmployee`, `deactivateEmployee`, `fetchSalaryHistory` + mappers
+- [x] `src/lib/useDebouncedValue.js`
+- [x] `src/lib/queryKeys.js`: `employees.detail(id)`, `employees.salaryHistory(id)`, root keys for `employees`/`kpis`/`breakdowns`
+- [x] `src/lib/invalidateEmployeeData.js`
+- [x] `src/hooks/useEmployee.js`, `useSalaryHistory.js` (query, `enabled`-gated), `useCreateEmployee.js`, `useUpdateEmployee.js`, `useDeactivateEmployee.js` (mutations, call `invalidateEmployeeData` on success)
+- [x] `src/components/employees/EmployeeFilterBar.jsx`
+- [x] `src/components/employees/EmployeeTable.jsx` (sortable headers restricted to the verified allow-list, status `Badge`, row-action callbacks only — no dialog state)
+- [x] `src/components/employees/EmployeePagination.jsx`
+- [x] `src/components/employees/EmployeeFormDialog.jsx` (fetches detail in edit mode, gated on `isSuccess`; clears salary on country change)
+- [x] `src/components/employees/EmployeeDetailDialog.jsx`
+- [x] `src/components/employees/DeactivateEmployeeDialog.jsx`
+- [x] `src/pages/EmployeesPage.jsx`: params state, hoisted `{mode, employeeId}` dialog state (keyed remount), out-of-range-page handling
+- [x] Tests (see Test Cases)
 
 ## Test Cases
 

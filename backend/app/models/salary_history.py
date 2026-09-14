@@ -24,4 +24,4 @@ class SalaryHistory(Base):
     new_salary_local: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     changed_at: Mapped[dt.datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
-    employee: Mapped["Employee"] = relationship()
+    employee: Mapped[Employee] = relationship()

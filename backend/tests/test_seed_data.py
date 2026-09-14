@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from sqlalchemy.orm import Session
+
 from app.database import Base, create_engine_with_foreign_keys_enabled
 from app.models.country import Country
 from app.models.department import Department
 from app.models.employee import Employee
 from app.seed.reference_data import COUNTRIES, DEPARTMENTS
 from app.seed.seed_data import seed_database
-from sqlalchemy.orm import Session
 
 
 def _seeded_employee_snapshot(employee_count: int) -> list[tuple[str, Decimal]]:

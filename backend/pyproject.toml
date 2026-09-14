@@ -1,0 +1,23 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 130
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    # FastAPI's Depends(...)-as-default is the framework's own documented dependency-injection
+    # idiom, not the mutable-default-argument bug this rule exists to catch.
+    "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test assertions and fixture setup read more clearly as one line per record than wrapped --
+# not worth reformatting for a limit that exists for production code readability.
+"tests/*" = ["E501"]

@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import random
+from collections.abc import Iterator, Sequence
 from decimal import Decimal
 from itertools import batched
-from typing import Iterator, Sequence
 
 from faker import Faker
 from sqlalchemy import insert
