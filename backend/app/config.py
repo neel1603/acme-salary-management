@@ -3,6 +3,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -14,7 +18,7 @@ class Settings:
         for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
         if origin.strip()
     )
-    gemini_api_key: str | None = "AQ.Ab8RN6LC8CxsOi1Za66e3Fly7K-jK__oVvLLG6NoETbS_lQVow"
+    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
 
 
 settings = Settings()
