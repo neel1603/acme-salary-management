@@ -31,9 +31,9 @@ export function CountryBreakdownChart({ filters }) {
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data}>
+      <BarChart data={data} margin={{ bottom: 24 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="countryName" />
+        <XAxis dataKey="countryName" interval={0} angle={-35} textAnchor="end" height={60} />
         <YAxis tickFormatter={formatUsdCompact} />
         <Tooltip content={<ChartTooltip />} />
         <Legend />
